@@ -1,6 +1,6 @@
 # Docker Laravel Development Environment
 
-This repository contains a Docker-based Laravel development environment that allows you to run Laravel without relying on local Windows environments like Laragon.
+This repository contains a Docker-based Laravel development environment that allows you to run Laravel without relying on local Windows environments like Laragon. The setup is designed to be cross-platform compatible and includes automation scripts for both Windows and Unix-based systems.
 
 ## Prerequisites
 
@@ -16,7 +16,39 @@ This environment uses custom ports to avoid conflicts with other services:
 
 ## Installation
 
-### New Installation
+### Quick Setup Using Scripts
+
+This project includes setup scripts for both Windows and Unix-based systems to automate the installation process:
+
+#### For Windows:
+
+Run the following command in PowerShell:
+
+```powershell
+.\setup.ps1
+```
+
+#### For macOS/Linux:
+
+Run the following command in Terminal:
+
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+These scripts will:
+- Create necessary directories
+- Set up proper permissions
+- Start Docker containers
+- Install Laravel dependencies
+- Configure environment variables
+- Run database migrations
+- Ensure proper permissions for storage directories
+
+### Manual Installation
+
+If you prefer to set up manually, follow these steps:
 
 1. Clone this repository (or download it)
 
@@ -55,15 +87,21 @@ docker-compose exec app php artisan key:generate
 docker-compose exec app php artisan migrate
 ```
 
-7. Access your application at [http://localhost:7890](http://localhost:7890)
+7. Set proper permissions for storage directories:
+
+```
+docker-compose exec -u root app chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+docker-compose exec -u root app chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+```
+
+8. Access your application at [http://localhost:7890](http://localhost:7890)
 
 ### Using on Another Computer
 
 1. Ensure Docker Desktop is installed on the target computer
 2. Clone/copy the project to the target computer
 3. Navigate to the project directory
-4. Run `docker-compose up -d` to start the environment
-5. Follow steps 3-7 from the "New Installation" section
+4. Use the appropriate setup script for your OS or follow the manual installation steps above
 
 ## Common Commands
 
@@ -136,11 +174,34 @@ If you encounter port conflicts, edit the `docker-compose.yml` file to change:
 - Web port (currently 7890)
 - MySQL port (currently 7891)
 
+After changing ports, restart the containers:
+```
+docker-compose down
+docker-compose up -d
+```
+
 ### Permissions Issues
 
-If you encounter permission issues with files created inside containers:
+This setup uses named volumes to manage persistent storage for Laravel and avoid permission issues. However, if you encounter permission problems, you can run the following commands:
+
+#### Fix Laravel Storage Permissions
 ```
-docker-compose exec app chown -R www-data:www-data /var/www/html/storage
+docker-compose exec -u root app chown -R www-data:www-data /var/www/html/storage
+docker-compose exec -u root app chown -R www-data:www-data /var/www/html/bootstrap/cache
+docker-compose exec -u root app chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+```
+
+#### Fix Database Permissions (if using SQLite)
+```
+docker-compose exec -u root app chown -R www-data:www-data /var/www/html/database
+docker-compose exec -u root app chmod 664 /var/www/html/database/database.sqlite
+```
+
+#### Clear Laravel Caches
+```
+docker-compose exec app php artisan cache:clear
+docker-compose exec app php artisan view:clear
+docker-compose exec app php artisan config:clear
 ```
 
 ### Container Won't Start
@@ -150,11 +211,74 @@ Check for port conflicts or other errors:
 docker-compose logs
 ```
 
+### Healthcheck Failures
+
+The containers include healthchecks to ensure services are running properly. If containers are restarting:
+
+1. Check container health status:
+```
+docker-compose ps
+```
+
+2. View specific container logs:
+```
+docker-compose logs app
+docker-compose logs nginx
+docker-compose logs mysql
+```
+
+### Issues on Windows
+
+If you encounter issues with file permissions or line endings on Windows:
+
+1. Ensure Docker Desktop is set to use Linux containers
+2. Check that you have proper permissions for the project directory
+3. If necessary, run the setup script with administrative privileges
+4. Configure Git to handle line endings properly:
+```
+git config --global core.autocrlf input
+```
+
+## Volume Persistence and Data Management
+
+This setup uses Docker named volumes for persistent data storage:
+
+- `laravel-storage`: Stores Laravel storage files (logs, cache, etc.)
+- `laravel-bootstrap-cache`: Stores Laravel bootstrap cache
+- `mysql-data`: Stores MySQL database files
+- `composer-cache`: Stores Composer cache to speed up dependency installation
+
+These volumes persist even when containers are removed. To completely remove all data and start fresh:
+
+```
+docker-compose down -v
+```
+
 ## Additional Information
 
+### Technical Specifications
 - PHP Version: 8.2
 - MySQL Version: 8.0
 - Nginx: Latest Alpine version
 
-This environment is completely isolated from your local Windows environment, allowing for consistent development across different machines.
+### Design Considerations
+- **Cross-platform compatibility**: Works on Windows, macOS, and Linux
+- **Isolated environment**: Completely isolated from your local environment
+- **Persistent storage**: Named volumes ensure data persistence between container restarts
+- **Automatic permissions**: Setup scripts handle permissions automatically
+- **Healthchecks**: Containers include health monitoring
+- **Security**: Configuration follows best practices for development environments
 
+### Setup Scripts
+The included setup scripts (`setup.sh` and `setup.ps1`) automate the environment configuration process:
+
+- Verify Docker installation and status
+- Create necessary directory structure
+- Set proper file permissions
+- Initialize containers
+- Install dependencies
+- Configure environment variables
+- Set up database
+- Optimize Laravel
+
+This environment is designed to provide a consistent development experience across different machines, ensuring that "it works on my machine" becomes "it works on everyone's machine."
