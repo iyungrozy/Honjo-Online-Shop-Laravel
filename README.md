@@ -1,3 +1,5 @@
+[Baca dalam Bahasa Indonesia](README-ID.md) [Read in English](README.md)
+
 # Docker Laravel Development Environment
 
 This repository contains a Docker-based Laravel development environment that allows you to run Laravel without relying on local Windows environments like Laragon. The setup is designed to be cross-platform compatible and includes automation scripts for both Windows and Unix-based systems.
